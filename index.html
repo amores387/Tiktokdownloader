@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>TikTok Video Downloader</title>
+<title>TikTok Downloader (Auto Preview)</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -21,19 +21,7 @@
         font-size: 16px;
         margin-bottom: 20px;
     }
-    button {
-        padding: 12px 20px;
-        background: #ff0050;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        color: #fff;
-        cursor: pointer;
-    }
-    button:hover { background: #ff3366; }
-    #preview {
-        margin-top: 20px;
-    }
+    #preview { margin-top: 20px; }
     video {
         width: 90%;
         border-radius: 10px;
@@ -55,35 +43,60 @@
 
 <h1>TikTok Video Downloader</h1>
 
-<input id="tiktokLink" placeholder="Paste TikTok link here..." />
-
-<button onclick="downloadVideo()">Download</button>
+<input id="tiktokLink" placeholder="Paste TikTok link here..." oninput="autoFetch()" />
 
 <div id="preview"></div>
 
 <script>
-async function downloadVideo() {
-    const link = document.getElementById("tiktokLink").value.trim();
+// CLEAN TIKTOK LINK
+function cleanTikTokLink(url) {
+    try {
+        let u = new URL(url);
+
+        if (u.pathname.includes("/video/")) {
+            return "https://www.tiktok.com" + u.pathname;
+        }
+        return url;
+    } catch {
+        return url;
+    }
+}
+
+let fetchTimer = null;
+
+function autoFetch() {
+    const linkInput = document.getElementById("tiktokLink").value.trim();
     const preview = document.getElementById("preview");
 
-    if (!link) {
-        preview.innerHTML = "<p>Please paste a TikTok link!</p>";
+    if (!linkInput) {
+        preview.innerHTML = "";
         return;
     }
 
-    preview.innerHTML = "<p>Fetching video...</p>";
+    // Delay fetch so it doesn't trigger for every keystroke
+    clearTimeout(fetchTimer);
+    fetchTimer = setTimeout(() => fetchVideo(linkInput), 550);
+}
+
+async function fetchVideo(linkInput) {
+    const preview = document.getElementById("preview");
+
+    // Clean messy TikTok link
+    const cleanLink = cleanTikTokLink(linkInput);
+
+    preview.innerHTML = "<p>Loading preview…</p>";
 
     try {
         const apiURL = 
-`https://betadash-api-swordslush-production.up.railway.app/api/tiktok?link=${encodeURIComponent(link)}`;
+`https://betadash-api-swordslush-production.up.railway.app/api/tiktok?link=${encodeURIComponent(cleanLink)}`;
 
         const res = await fetch(apiURL);
         const data = await res.json();
 
-        console.log(data);
+        console.log("API RESULT:", data);
 
-        if (!data || !data.video || !data.video.no_watermark) {
-            preview.innerHTML = "<p>Failed to fetch video. Maybe link is invalid.</p>";
+        if (!data?.video?.no_watermark) {
+            preview.innerHTML = "<p>Cannot load video. Invalid TikTok link.</p>";
             return;
         }
 
